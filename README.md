@@ -453,29 +453,6 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- **🧠 TensorFlow Team**: Deep learning framework
-- **🔀 Scikit-Fuzzy**: Fuzzy logic implementation
-- **📊 Yahoo Finance**: Stock data API
-- **🎓 Soft Computing Community**: Research inspiration
-
-## 📚 References
-
-1. Jang, J.S.R. (1993). "ANFIS: Adaptive-Network-Based Fuzzy Inference System"
-2. Zadeh, L.A. (1965). "Fuzzy Sets and Systems"
-3. Hochreiter, S. & Schmidhuber, J. (1997). "Long Short-Term Memory"
-4. Cho, K. et al. (2014). "Gated Recurrent Units"
-
-## 📞 Contact
-
-- **👨‍💻 Author**: [Your Name]
-- **📧 Email**: your.email@example.com
-- **🔗 LinkedIn**: [Your LinkedIn Profile]
-- **🐙 GitHub**: [Your GitHub Profile]
-
 ---
 
 ⭐ **If you find this project useful, please give it a star!** ⭐
-
-**🔶 "Bridging the gap between accuracy and interpretability in financial AI"** 🔶
