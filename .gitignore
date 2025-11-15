@@ -1,0 +1,9 @@
+# Python Environment
+.venv/
+__pycache__/
+venv/
+env/
+
+# Models and Checkpoints
+*.ckpt
+*.h5
