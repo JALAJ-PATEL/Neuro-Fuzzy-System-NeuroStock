@@ -7,3 +7,4 @@ env/
 # Models and Checkpoints
 *.ckpt
 *.h5
+!stock_model.h5

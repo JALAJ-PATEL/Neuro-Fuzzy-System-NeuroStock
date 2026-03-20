@@ -11,11 +11,15 @@ import pickle
 
 # Try to import TensorFlow/Keras, fallback if not available
 try:
-    from keras.models import load_model
+    from tensorflow.keras.models import load_model
     KERAS_AVAILABLE = True
 except ImportError:
-    KERAS_AVAILABLE = False
-    st.error("TensorFlow/Keras not available. Using fallback prediction method.")
+    try:
+        from keras.models import load_model
+        KERAS_AVAILABLE = True
+    except ImportError:
+        KERAS_AVAILABLE = False
+        st.error("TensorFlow/Keras not available. Using fallback prediction method.")
 
 # Try to import scikit-fuzzy for advanced analysis
 try:
