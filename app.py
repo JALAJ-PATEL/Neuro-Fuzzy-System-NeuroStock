@@ -19,7 +19,7 @@ except ImportError:
         KERAS_AVAILABLE = True
     except ImportError:
         KERAS_AVAILABLE = False
-        st.error("TensorFlow/Keras not available. Using fallback prediction method.")
+        st.warning("TensorFlow/Keras not available. Using fallback prediction method.")
 
 # Try to import scikit-fuzzy for advanced analysis
 try:
