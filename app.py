@@ -582,6 +582,18 @@ if data_loaded:
         y_test, y_predicted = simple_prediction_fallback(df)
         prediction_method = "Simple Moving Average"
 
+    # Normalize arrays for consistent downstream handling
+    y_test = np.asarray(y_test).reshape(-1)
+    y_predicted = np.asarray(y_predicted).reshape(-1)
+    common_len = min(len(y_test), len(y_predicted))
+
+    if common_len == 0:
+        st.error("Unable to generate predictions for the selected stock/date range.")
+        st.stop()
+
+    y_test = y_test[:common_len]
+    y_predicted = y_predicted[:common_len]
+
     # Metrics
     mae = mean_absolute_error(y_test, y_predicted)
     rmse = np.sqrt(mean_squared_error(y_test, y_predicted))
@@ -609,7 +621,7 @@ if data_loaded:
     st.sidebar.subheader("Download Data")
     predicted_vs_actual = pd.DataFrame({
         'Actual Price': y_test,
-        'Predicted Price': y_predicted.flatten() if hasattr(y_predicted, 'flatten') else y_predicted
+        'Predicted Price': y_predicted
     })
     csv_data = predicted_vs_actual.to_csv(index=False)
     st.sidebar.download_button(
