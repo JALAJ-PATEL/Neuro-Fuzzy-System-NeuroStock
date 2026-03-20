@@ -44,47 +44,71 @@ stock = st.text_input('Enter Stock Ticker (e.g., AAPL, TSLA, etc.)', 'MSFT')
 start = st.date_input('Select start date', dt.date(2014, 1, 1))
 end = st.date_input('Select end date', dt.date(2024, 1, 1))
 
+@st.cache_data(ttl=900)
+def fetch_stock_data(symbol, start_date, end_date):
+    """Fetch stock data with multiple fallback strategies for cloud reliability."""
+    clean_symbol = str(symbol).strip().upper()
+    last_error = ""
+
+    fetch_strategies = [
+        lambda: yf.download(clean_symbol, start=start_date, end=end_date, progress=False, auto_adjust=False, threads=False),
+        lambda: yf.Ticker(clean_symbol).history(start=start_date, end=end_date, auto_adjust=False),
+        lambda: yf.download(clean_symbol, period="max", progress=False, auto_adjust=False, threads=False),
+    ]
+
+    for strategy in fetch_strategies:
+        try:
+            data = strategy()
+            if data is None or data.empty:
+                continue
+
+            # Normalize MultiIndex columns if Yahoo returns them.
+            if isinstance(data.columns, pd.MultiIndex):
+                data.columns = data.columns.get_level_values(0)
+
+            required_cols = {'Open', 'High', 'Low', 'Close', 'Volume'}
+            if not required_cols.issubset(set(data.columns)):
+                continue
+
+            # If period=max was used, enforce selected date window.
+            if isinstance(data.index, pd.DatetimeIndex):
+                start_ts = pd.Timestamp(start_date)
+                end_ts = pd.Timestamp(end_date)
+                data = data[(data.index >= start_ts) & (data.index <= end_ts)]
+
+            if not data.empty:
+                return data, ""
+        except Exception as exc:
+            last_error = str(exc)
+
+    return pd.DataFrame(), last_error
+
+
 # Fetch data from Yahoo Finance
 data_loaded = False
 if 'last_error' not in st.session_state:
     st.session_state.last_error = ''
 
-try:
-    df = yf.download(stock, start, end)
-    
-    # Check if download was successful and we have data
-    if df.empty:
-        st.error(f"No data found for symbol '{stock}'. Please check the ticker symbol.")
-        st.info("💡 Try a different stock symbol from the sidebar")
-    else:
-        # Check if we have enough data for analysis
-        if len(df) < 50:
-            st.warning(f"Limited data available for '{stock}'. Analysis may be less accurate.")
-            st.warning(f"Got {len(df)} days of data, recommended minimum is 50 days.")
-        
-        st.subheader('Data Summary')
-        st.write(df.describe())
-        data_loaded = True
-        st.session_state.last_error = ''  # Clear any previous errors
-    
-except Exception as e:
-    error_msg = str(e)
-    st.session_state.last_error = error_msg
-    if "Rate limited" in error_msg or "Too Many Requests" in error_msg:
-        st.error(f"⚠️ Yahoo Finance rate limit exceeded for '{stock}'.")
-        st.warning("� Yahoo Finance is temporarily blocking requests due to high usage.")
-        st.info("💡 **Solutions:**")
-        st.info("   • Wait 2-3 minutes and try again")
-        st.info("   • Try a different stock symbol")
-        st.info("   • Use popular alternatives: **MSFT**, **GOOGL**, **TSLA**, **NVDA**, **META**, **AMZN**")
-        st.info("💡 Change the stock symbol in the sidebar - the page will automatically refresh")
-    elif "No data found" in error_msg or df.empty:
-        st.error(f"📊 No data found for symbol '{stock}'. Please check the ticker symbol.")
-        st.info("💡 Make sure you're using the correct stock ticker symbol")
-        st.info("💡 Try popular stocks: **MSFT**, **GOOGL**, **TSLA**, **NVDA**, **META**, **AMZN**")
-    else:
-        st.error(f"❌ Error fetching stock data: {error_msg}")
-        st.info("🔍 Please check the ticker symbol and internet connection.")
+df, fetch_error = fetch_stock_data(stock, start, end)
+
+if df.empty:
+    st.session_state.last_error = fetch_error
+    st.error(f"No data found for symbol '{stock.strip().upper()}'.")
+    st.info("💡 Make sure the symbol is valid and has data for the selected dates.")
+    st.info("💡 Try these symbols: **MSFT**, **AAPL**, **GOOGL**, **TSLA**, **NVDA**")
+    st.info("💡 If this is a temporary Yahoo issue on cloud, retry in 1-2 minutes.")
+    if fetch_error:
+        st.caption(f"Data provider details: {fetch_error}")
+else:
+    # Check if we have enough data for analysis
+    if len(df) < 50:
+        st.warning(f"Limited data available for '{stock.strip().upper()}'. Analysis may be less accurate.")
+        st.warning(f"Got {len(df)} days of data, recommended minimum is 50 days.")
+
+    st.subheader('Data Summary')
+    st.write(df.describe())
+    data_loaded = True
+    st.session_state.last_error = ''  # Clear any previous errors
 
 # Only proceed with analysis if data was loaded successfully
 if data_loaded:
