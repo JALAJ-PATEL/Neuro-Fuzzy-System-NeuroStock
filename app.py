@@ -10,6 +10,7 @@ import datetime as dt
 import pickle
 
 # Try to import TensorFlow/Keras, fallback if not available
+KERAS_IMPORT_ERROR = ""
 try:
     from tensorflow.keras.models import load_model
     KERAS_AVAILABLE = True
@@ -19,7 +20,7 @@ except ImportError:
         KERAS_AVAILABLE = True
     except ImportError:
         KERAS_AVAILABLE = False
-        st.warning("TensorFlow/Keras not available. Using fallback prediction method.")
+        KERAS_IMPORT_ERROR = "TensorFlow/Keras is not available in this runtime."
 
 # Try to import scikit-fuzzy for advanced analysis
 try:
@@ -35,7 +36,7 @@ st.title('NeuroStock: Stock Price Prediction App')
 # Add helpful information at the top
 st.info("🚀 **Welcome!** This app provides AI-powered stock price analysis and predictions.")
 if not KERAS_AVAILABLE:
-    st.warning("⚠️ TensorFlow/Keras not available. Using intelligent moving average predictions.")
+    st.info("ℹ️ **Cloud Mode Active**: Using fast statistical predictions (TensorFlow model unavailable in this environment).")
 else:
     st.success("✅ Neural network predictions available!")
 
@@ -564,15 +565,16 @@ if data_loaded:
             model_loaded = True
             st.success("✅ Neural network model loaded successfully!")
         except Exception as e:
-            st.warning(f"⚠️ Could not load model: {e}")
-            st.info("Using simple prediction fallback method")
+            st.info("ℹ️ Neural model could not be loaded in this runtime. Using statistical fallback predictions.")
+            st.caption(f"Model load details: {e}")
             model_loaded = False
     else:
+        st.info("ℹ️ Using statistical fallback predictions for this deployment.")
         if not os.path.exists(model_path):
-            st.warning(f"⚠️ Model file '{model_path}' not found.")
+            st.caption(f"Model file '{model_path}' not found in deployed app.")
         if not KERAS_AVAILABLE:
-            st.warning("⚠️ TensorFlow/Keras not available.")
-        st.info("Using simple prediction fallback method")
+            detail_msg = KERAS_IMPORT_ERROR if KERAS_IMPORT_ERROR else "TensorFlow/Keras import unavailable."
+            st.caption(detail_msg)
         model_loaded = False
 
     if model_loaded:
