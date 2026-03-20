@@ -189,7 +189,7 @@ This project demonstrates the power of **Soft Computing** by combining **Neural 
 ### Prerequisites
 
 ```bash
-pip install yfinance scikit-fuzzy tensorflow pandas numpy matplotlib seaborn scikit-learn streamlit plotly
+python 3.10 or 3.11 recommended for full neural model support
 ```
 
 ### Installation
@@ -205,16 +205,67 @@ cd neuro-fuzzy-stock-prediction
 pip install -r requirements.txt
 ```
 
-3. **Run the Streamlit Web Application:**
+3. **(Optional but recommended) Enable neural model support locally:**
+```bash
+pip install tensorflow-cpu==2.15.1
+```
+
+4. **Run the Streamlit Web Application:**
 ```bash
 streamlit run app.py
 ```
-   🌐 **Access the web app at**: http://localhost:8501
+  🌐 **Access the web app at**: http://localhost:8501
 
-4. **Or run the Jupyter notebook:**
+5. **Or run the Jupyter notebook:**
 ```bash
 jupyter notebook Neuro_Fuzzy_System_Stock_Predictions.ipynb
 ```
+
+## 🧠 Model Setup And Recovery
+
+Use this section when setting up on a new machine or when the app says model file not found.
+
+### Step 1: Confirm model file exists
+
+The app expects this file in the project root:
+
+- `stock_model.h5`
+
+If it is present, the neural prediction path can be loaded (when TensorFlow is available).
+
+### Step 2: If `stock_model.h5` is missing
+
+Choose one of these recovery paths:
+
+1. **Restore from Git history or release artifact**
+  - Pull latest changes from the default branch.
+  - Verify `stock_model.h5` appears in project root.
+
+2. **Recreate by retraining from notebook**
+  - Open `Neuro_Fuzzy_System_Stock_Predictions.ipynb`.
+  - Run all training cells.
+  - Save final model as `stock_model.h5` in the repository root.
+
+### Step 3: Verify model loading locally
+
+Run:
+
+```bash
+streamlit run app.py
+```
+
+Expected UI message in local neural mode:
+
+- `Neural network model loaded successfully!`
+
+If TensorFlow is unavailable, the app automatically switches to statistical fallback predictions.
+
+## ☁️ Streamlit Cloud Notes
+
+- Streamlit Cloud may run Python versions where TensorFlow wheels are unavailable.
+- In that case, app deployment still works but runs in fallback prediction mode.
+- This is expected behavior, not a functional crash.
+- For guaranteed neural model inference, run locally with Python 3.10/3.11 and TensorFlow installed.
 
 ### 🌐 Web Application Features
 
