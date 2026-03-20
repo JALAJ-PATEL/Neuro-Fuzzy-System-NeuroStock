@@ -7,6 +7,12 @@
 
 **A comprehensive Soft Computing project that integrates deep recurrent neural networks with fuzzy logic inference systems for intelligent stock price prediction.**
 
+## 🌐 Live Deployment
+
+Try the deployed app directly on Streamlit Cloud:
+
+https://neuro-fuzzy-stock-price-prediction.streamlit.app/
+
 ## 🎯 Project Overview
 
 This project demonstrates the power of **Soft Computing** by combining **Neural Networks** and **Fuzzy Logic** into a hybrid **Neuro-Fuzzy Inference System (NFIS)**. The system leverages multiple deep learning models (RNN, LSTM, GRU, BiLSTM) to capture complex temporal patterns in stock data, then uses fuzzy logic to intelligently combine their predictions with interpretable decision-making rules.
