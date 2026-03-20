@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.ensemble import RandomForestRegressor
 import streamlit as st
 import datetime as dt
 import pickle
@@ -139,56 +140,84 @@ if data_loaded:
     plt.legend()
     st.pyplot(fig)
 
-    # Simple prediction function using moving averages as fallback
-    def simple_prediction_fallback(data, lookback=100):
-        """
-        Simple prediction using moving averages when TensorFlow is not available
-        """
+    # ML fallback predictor for cloud environments without TensorFlow
+    def simple_prediction_fallback(data):
+        """Predict using lag/indicator features with a RandomForest regressor."""
         try:
-            # Check if we have enough data
-            if len(data) < 50:
-                st.warning(f"Insufficient data for analysis. Need at least 50 days, got {len(data)} days.")
-                return np.array([100]), np.array([100])  # Return dummy values
-            
-            close_prices = data['Close'].values
-            
-            # Validate we have enough data for moving averages
-            if len(close_prices) < 50:
-                st.warning("Insufficient price data for moving average calculations.")
-                return np.array([100]), np.array([100])
-            
-            # Use moving averages for prediction with error handling
-            sma_20 = data['Close'].rolling(window=20).mean()
-            sma_50 = data['Close'].rolling(window=50).mean()
-            ema_12 = data['Close'].ewm(span=12).mean()
-            
-            # Get the last valid values
-            sma_short = sma_20.dropna().iloc[-1] if len(sma_20.dropna()) > 0 else close_prices[-1]
-            sma_long = sma_50.dropna().iloc[-1] if len(sma_50.dropna()) > 0 else close_prices[-1]
-            ema = ema_12.dropna().iloc[-1] if len(ema_12.dropna()) > 0 else close_prices[-1]
-            
-            # Simple trend-based prediction
-            if len(close_prices) >= 10:
-                recent_trend = (close_prices[-1] - close_prices[-10]) / 10
-            else:
-                recent_trend = 0
-            
-            predicted_price = close_prices[-1] + recent_trend
-            
-            # Create dummy predictions array
-            num_predictions = min(lookback, len(close_prices) // 2)
-            if num_predictions <= 0:
-                num_predictions = min(30, len(close_prices))
-            
-            y_predicted = np.linspace(close_prices[-num_predictions], predicted_price, num_predictions)
-            y_test = close_prices[-num_predictions:]
-            
+            if len(data) < 160:
+                st.warning(
+                    f"Limited history ({len(data)} rows). Using a lightweight trend fallback; "
+                    "for better quality, use at least 160 trading days."
+                )
+                closes = data['Close'].astype(float).to_numpy()
+                if len(closes) < 10:
+                    return closes, closes
+                horizon = min(30, max(5, len(closes) // 6))
+                y_test = closes[-horizon:]
+                trend = np.mean(np.diff(closes[-10:])) if len(closes) >= 10 else 0.0
+                y_predicted = y_test + trend
+                return y_test, y_predicted
+
+            feat = data[['Close', 'Volume']].copy()
+            feat['returns_1d'] = feat['Close'].pct_change()
+            feat['sma_10'] = feat['Close'].rolling(10).mean()
+            feat['sma_20'] = feat['Close'].rolling(20).mean()
+            feat['ema_12'] = feat['Close'].ewm(span=12, adjust=False).mean()
+            feat['vol_20'] = feat['returns_1d'].rolling(20).std()
+
+            for lag in [1, 2, 3, 5, 10, 20]:
+                feat[f'close_lag_{lag}'] = feat['Close'].shift(lag)
+                feat[f'return_lag_{lag}'] = feat['returns_1d'].shift(lag)
+
+            feat['target'] = feat['Close'].shift(-1)
+            feat = feat.dropna().copy()
+
+            if len(feat) < 80:
+                closes = data['Close'].astype(float).to_numpy()
+                horizon = min(30, max(5, len(closes) // 6))
+                y_test = closes[-horizon:]
+                trend = np.mean(np.diff(closes[-10:])) if len(closes) >= 10 else 0.0
+                y_predicted = y_test + trend
+                return y_test, y_predicted
+
+            feature_cols = [
+                'Close', 'Volume', 'returns_1d', 'sma_10', 'sma_20', 'ema_12', 'vol_20',
+                'close_lag_1', 'close_lag_2', 'close_lag_3', 'close_lag_5', 'close_lag_10', 'close_lag_20',
+                'return_lag_1', 'return_lag_2', 'return_lag_3', 'return_lag_5', 'return_lag_10', 'return_lag_20'
+            ]
+
+            X = feat[feature_cols].to_numpy(dtype=float)
+            y = feat['target'].to_numpy(dtype=float)
+
+            split_idx = int(len(X) * 0.8)
+            X_train, X_test = X[:split_idx], X[split_idx:]
+            y_train, y_test = y[:split_idx], y[split_idx:]
+
+            if len(X_test) == 0:
+                X_train, X_test = X[:-10], X[-10:]
+                y_train, y_test = y[:-10], y[-10:]
+
+            model = RandomForestRegressor(
+                n_estimators=300,
+                max_depth=10,
+                min_samples_split=4,
+                min_samples_leaf=2,
+                random_state=42,
+                n_jobs=-1
+            )
+            model.fit(X_train, y_train)
+            y_predicted = model.predict(X_test)
+
             return y_test, y_predicted
-            
+
         except Exception as e:
             st.error(f"Error in fallback prediction: {str(e)}")
-            # Return dummy values to prevent complete failure
-            return np.array([100]), np.array([100])
+            closes = data['Close'].astype(float).to_numpy()
+            if len(closes) == 0:
+                return np.array([100.0]), np.array([100.0])
+            horizon = min(30, max(1, len(closes) // 6))
+            y_test = closes[-horizon:]
+            return y_test, y_test.copy()
 
     # Advanced Neuro-Fuzzy Analysis Functions
     def create_advanced_visualizations(df, stock_symbol):
@@ -610,7 +639,7 @@ if data_loaded:
     else:
         # Fallback prediction method
         y_test, y_predicted = simple_prediction_fallback(df)
-        prediction_method = "Simple Moving Average"
+        prediction_method = "Statistical ML Fallback (Random Forest)"
 
     # Normalize arrays for consistent downstream handling
     y_test = np.asarray(y_test).reshape(-1)
